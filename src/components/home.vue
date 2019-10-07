@@ -77,13 +77,12 @@ export default {
       // 是否折叠
       isCollapse: false,
       // 被激活的链接地址
-      activePath: ''
+      activePath:'',
     }
-  },
+  }, 
   created() {
     this.getMenuList()
     this.activePath = window.sessionStorage.getItem('activePath')
-    this.activePath = activePath
   },
   methods: {
     logout() {
@@ -106,6 +105,7 @@ export default {
     // 保存链接的激活状态
     saveNavState(activePath) {
       window.sessionStorage.setItem('activePath', activePath)
+      this.activePath = activePath
     }
   }
 }

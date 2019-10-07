@@ -12,10 +12,20 @@ import {
   menu,
   submenu,
   MenuItemGroup,
-  MenuItem
+  MenuItem,
+  Breadcrumb,
+  BreadcrumbItem,
+  Card,
+  Row,
+  Col
+
 } from 'element-ui'
 
-
+Vue.use(Col)
+Vue.use(Row)
+Vue.use(Card)
+Vue.use(BreadcrumbItem)
+Vue.use(Breadcrumb)
 Vue.use(MenuItem)
 Vue.use(MenuItemGroup)
 Vue.use(submenu)

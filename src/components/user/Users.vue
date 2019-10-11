@@ -260,7 +260,7 @@ export default {
           return
         }
         // 可以发起添加用户的网络请求
-        const { data: res } = await this.$http.post('users', this.editForm)
+        const { data: res } = await this.$http.post('users', this.addForm)
         console.log(this.editForm)
         if (res.meta.status !== 200) {
           this.$message.error('添加用户失败')
@@ -299,7 +299,9 @@ export default {
           this.editForm
         )
         //判断如果修改失败，就做提示
-        if (res.meta.status !== 200) return this.$message.error('修改用户失败')
+        if (res.meta.status !== 200) {
+          return this.$message.error('修改用户失败')
+        }
         //修改成功的提示
         this.$message.success('修改用户成功')
         //关闭对话框

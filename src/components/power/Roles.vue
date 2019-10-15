@@ -72,7 +72,50 @@
       <!-- 角色列表区域 -->
       <el-table :data="rolesList" border strip>
         <!-- 展开列 -->
-        <el-table-column type="expand"></el-table-column>
+        <el-table-column type="expand">
+          <template slot-scope="scope">
+            <el-row
+              v-for="(item1,i1) in scope.row.children"
+              :key="item1"
+              :class="['bdbottom' ,i1 === 0 ? 'bdtop'  : '','vcenter']"
+            >
+              <!-- 渲染一级权限 -->
+              <el-col :span="5">
+                <el-tag closable @close="removeRightByid(scope.row,item1.id)">{{item1.authName}}</el-tag>
+                <i class="el-icon-caret-right"></i>
+              </el-col>
+              <!-- 渲染二三级权限 -->
+              <el-col :span="19">
+                <!-- 通过for循环嵌套渲染二级权限 -->
+                <el-row
+                  v-for="(item2,i2) in item1.children"
+                  :key="item2.id"
+                  :class="[i2 === 0 ? '' : 'bdtop','vcenter']"
+                >
+                  <!-- 二级权限渲染 -->
+                  <el-col :span="6">
+                    <el-tag
+                      type="success"
+                      closable
+                      @close="removeRightByid(scope.row,item2.id)"
+                    >{{item2.authName}}</el-tag>
+                    <i class="el-icon-caret-right"></i>
+                  </el-col>
+                  <!-- 三级权限渲染 -->
+                  <el-col :span="18">
+                    <el-tag
+                      v-for="(item3,i3) in item2.children"
+                      :key="item3.id"
+                      type="warning"
+                      closable
+                      @close="removeRightByid(scope.row,item3.id)"
+                    >{{item3.authName}}</el-tag>
+                  </el-col>
+                </el-row>
+              </el-col>
+            </el-row>
+          </template>
+        </el-table-column>
         <!-- 索引列 -->
         <el-table-column type="index"></el-table-column>
         <el-table-column label="角色名称" prop="roleName"></el-table-column>
@@ -91,11 +134,39 @@
               icon="el-icon-delete"
               @click="removeUserById(scope.row.id)"
             >删除</el-button>
-            <el-button size="mini" type="warning" icon="el-icon-setting">分配权限</el-button>
+            <el-button
+              size="mini"
+              type="warning"
+              icon="el-icon-setting"
+              @click="shouSetRightDialog(scope.row)"
+            >分配权限</el-button>
           </template>
         </el-table-column>
       </el-table>
     </el-card>
+
+    <!-- 分配权限对话框 -->
+    <el-dialog
+      title="分配权限"
+      :visible.sync="setRightDialogVisible"
+      width="50%"
+      @close="setRightDialgClosed"
+    >
+      <!-- 树形控件 -->
+      <el-tree
+        :data="rightslist"
+        :props="treeProps"
+        show-checkbox
+        node-key="id"
+        default-expand-all
+        :default-checked-keys="defKeys"
+        ref="treeRef"
+      ></el-tree>
+      <span slot="footer" class="dialog-footer">
+        <el-button @click="setRightDialogVisible = false">取 消</el-button>
+        <el-button type="primary" @click="allotRights">确 定</el-button>
+      </span>
+    </el-dialog>
   </div>
 </template>
 
@@ -137,7 +208,20 @@ export default {
           { required: true, message: '请输入角色描述', trigger: 'blur' },
           { min: 3, max: 10, message: '长度在 3 到 10 个字符', trigger: 'blur' }
         ]
-      }
+      },
+      //控制分配权限对话框的隐藏与显示
+      setRightDialogVisible: false,
+      // 所有权限的数据
+      rightslist: [],
+      // 树形控件的属性绑定对象
+      treeProps: {
+        label: 'authName',
+        children: 'children'
+      },
+      // 默认选中的节点id值数组
+      defKeys: [],
+      //即将分配权限的id
+      roleId: ''
     }
   },
   created() {
@@ -228,10 +312,99 @@ export default {
       }
       this.$message.success('删除角色成功')
       this.geiRolesList()
+    },
+    // 根据id删除对应的权限
+    async removeRightByid(role, rightId) {
+      // 弹框提示用户是否删除
+      const confirmRseult = await this.$confirm(
+        '此操作将永久删除该权限, 是否继续?',
+        '提示',
+        {
+          confirmButtonText: '确定',
+          cancelButtonText: '取消',
+          type: 'warning'
+        }
+      ).catch(err => err)
+      if (confirmRseult !== 'confirm') {
+        return this.$message.info('删除已取消')
+      }
+      const { data: res } = await this.$http.delete(
+        `roles/${role.id}/rights/${rightId}`
+      )
+      if (res.meta.status !== 200) {
+        return this.$message.error(删除权限失败)
+      }
+      this.$message.success('删除权限成功')
+      role.children = res.data
+    },
+    // 展示分配权限的对话框
+    async shouSetRightDialog(role) {
+      this.roleId = role.id
+      // 获取所有权限数据
+      const { data: res } = await this.$http.get('rights/tree')
+      if (res.meta.status !== 200) {
+        return this.$message.error('请求权限数据失败')
+      }
+      // 获取到的权限数据保存到data中
+      this.rightslist = res.data
+
+      // 递归获取三级节点的id
+      this.getleafKeys(role, this.defKeys)
+
+      this.setRightDialogVisible = true
+    },
+    // 通过递归形式获取角色下的所有三级权限的id，并保存到dayKeys数组中
+    getleafKeys(node, arr) {
+      // 所有当前node节点不包含children，则是三级节点
+      if (!node.children) {
+        return arr.push(node.id)
+      }
+
+      node.children.forEach(item => this.getleafKeys(item, arr))
+    },
+    // 监听分配权限对话框关闭事件
+    setRightDialgClosed() {
+      this.defKeys = []
+    },
+    // 为角色分配权限
+    async allotRights() {
+      const keys = [
+        ...this.$refs.treeRef.getCheckedKeys(),
+        ...this.$refs.treeRef.getHalfCheckedKeys()
+      ]
+      const idStr = keys.join(',')
+
+      const { data: res } = await this.$http.post(
+        `roles/${this.roleId}/rights`,
+        { rids: idStr }
+      )
+
+      if (res.meta.status !== 200) {
+        this.$message.error('分配权限失败')
+      }
+      this.$message.success('分配权限成功')
+      this.geiRolesList()
+      this.setRightDialogVisible = false
     }
   }
 }
 </script>
 
 <style lang="less" scoped>
+.el-tag {
+  margin: 7px;
+}
+
+.bdtop {
+  border-top: 1px solid #eee;
+}
+
+.bdbottom {
+  border-bottom: 1px solid #eee;
+}
+
+.vcenter {
+  display: flex;
+  align-items: center;
+}
 </style>

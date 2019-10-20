@@ -36,9 +36,11 @@ import {
   Steps,
   Step,
   CheckboxGroup,
-  Checkbox
+  Checkbox,
+  Upload
 } from 'element-ui'
 
+Vue.use(Upload)
 Vue.use(Checkbox)
 Vue.use(CheckboxGroup)
 Vue.use(Step)

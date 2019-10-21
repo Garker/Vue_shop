@@ -1,14 +1,14 @@
 module.exports = {
-  "presets": [
-    "@vue/app"
-  ],
-  "plugins": [
+  presets: ['@vue/app'],
+  plugins: [
     [
-      "component",
+      'component',
       {
-        "libraryName": "element-ui",
-        "styleLibraryName": "theme-chalk"
+        libraryName: 'element-ui',
+        styleLibraryName: 'theme-chalk'
       }
-    ]
+    ],
+    'transform-remove-console',
+    '@babel/plugin-syntax-dynamic-import'
   ]
 }
